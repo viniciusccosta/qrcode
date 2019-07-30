@@ -439,7 +439,8 @@ class QrCode():
 
         # QuitZone:
         n           = QUIT_ZONE_SIZE
-        self.qrcode = [ ["0" if col < n/2 or row < n/2 or col >= self.size+n/2 or row >= self.size+n/2 else self.matrix[row-int(n/2)][col-int(n/2)] for col in range(self.size + n)] for row in range(self.size + n)]
+        self.matrix = [ ["0" if col < n/2 or row < n/2 or col >= self.size+n/2 or row >= self.size+n/2 else self.matrix[row-int(n/2)][col-int(n/2)] for col in range(self.size + n)] for row in range(self.size + n)]
+        self.size   = len(self.matrix) # TODO: Should We Change it Now ?
 
         if self.print_steps:
             print(f'Input: |{self.string_input}|\n'
@@ -454,13 +455,15 @@ class QrCode():
             for value in rows:
                 if cnvToHashtag:
                     value = '#' if value == '1' else ''
-                print( f"|{value:^{n}}", end = '' )
-            print("|")
+                #print( f"|{value:^{n}}", end = '' )
+                print(f"{value:^{n}}", end='')
+            #print("|")
+            print("")
         print("=" * self.size * n + '\n')
 
     # ------------------------------------------------------------------------------------------------------------------
     def getQRCodeMatrix(self):
-        aux     = deepcopy(self.qrcode)
+        aux     = deepcopy(self.matrix)
         result  = [ [255 if value == "0" else 0 for value in rows ] for rows in aux ]
 
         return result
@@ -494,7 +497,7 @@ class QrCode():
         image = Image.fromarray( image_matrix )
         if image.mode != 'RGB':
             image = image.convert('RGB')
-        image.save(f"./{filename}.bmp", format='BMP')
+        image.save(f"{filename}.bmp", format='BMP')
 
     # ------------------------------------------------------------------------------------------------------------------
     def _dataAnalysis(self,):
@@ -1046,30 +1049,73 @@ class QrCode():
 
 # ======================================================================================================================
 if __name__ == "__main__":
+    import argparse
+    import time
+
+    parser = argparse.ArgumentParser(description="Generate your own QR Code")
+    parser.add_argument('-i'     , required=True,  help='Input: Your Text'                   , action='store'       , type=str  )
+    parser.add_argument('-o'     , required=False, help='Output: Name of your QR Code Image' , action='store'       , type=str  )
+    parser.add_argument('-s'     , required=False, help='Display QR Code'                    , action='store_true'  ,   )
+    parser.add_argument('-p'     , required=False, help='Print QR Code on Terminal'          , action='store_true'  ,   )
+    parser.add_argument('--info' , required=False, help='Show all info about QR Code'        , action='store_true'  ,   )
+    parser.add_argument('--debug', required=False, help='Print every step'                   , action='store_true'  ,   )
+    arguments = parser.parse_args()
+
     try:
-        """
-        # Generating Multiples QR Codes for Test (Maximum Characters of Byte Encoding):
-        
-        from random import randint
+        # QR Code:
+        qr = QrCode(arguments.i, print_steps=arguments.debug)
 
-        Upper_Limits_Byte   = [17, 14, 11, 7, 32, 26, 20, 14, 53, 42, 32, 24, 78, 62, 46, 34, 106, 84, 60, 44, 134, 106, 74, 58, 154, 122, 86, 64, 192, 152, 108, 84, 230,180, 130, 98, 271, 213, 151, 119, 321, 251, 177, 137, 367, 287, 203, 155, 425, 331, 241, 177, 458, 362, 258, 194, 520, 412, 292, 220, 586,450, 322, 250, 644, 504, 364, 280, 718, 560, 394, 310, 792, 624, 442, 338, 858, 666, 482, 382, 929, 711, 509, 403, 1003, 779, 565, 439, 1091,857, 611, 461, 1171, 911, 661, 511, 1273, 997, 715, 535, 1367, 1059, 751, 593, 1465, 1125, 805, 625, 1528, 1190, 868, 658, 1628, 1264, 908,698, 1732, 1370, 982, 742, 1840, 1452, 1030, 790, 1952, 1538, 1112, 842, 2068, 1628, 1168, 898, 2188, 1722, 1228, 958, 2303, 1809, 1283, 983,2431, 1911, 1351, 1051, 2563, 1989, 1423, 1093, 2699, 2099, 1499, 1139, 2809, 2213, 1579, 1219, 2953, 2331, 1663, 1273]
-        ECLs                = ['L', 'M', 'Q', 'H']
-        gabarito            = []
+        # BMP Output:
+        if arguments.o is not None:
+            qr.bmp(arguments.o)
+        else:
+            maxlen = 20
+            if len(arguments.i) > maxlen:
+                name = arguments.i[0:maxlen-3] + '__'
+            else:
+                name = arguments.i
 
-        for i,up_lim in enumerate(Upper_Limits_Byte):
-            string  = ''.join([chr(randint(97, 97 + 25)) for n in range(up_lim)])                   # Generate random string using a-z characters
-            qr      = QrCode(string, error_corretion_level=ECLs[i%4])                               # Force the QR Code to use specific Error Correction Level
-            gabarito.append( (f'{i};{up_lim};{qr.string_input};{qr.version};{qr.er_cor_level}') )   # Save QR Code information
-            qr.bmp(f"images/{i:04}-{qr.version}-{qr.er_cor_level}", scale=10)                       # Write on disk the QR Code
+            qr.bmp( f"./{name}-{ int(round(time.time() * 1000)) }" )
 
-        with open('images/gabarito.csv','w') as f:
-            f.write( '\n'.join(gabarito) )
-        """
-        qr = QrCode("<3 !!! Hello World !!! <3")
-        qr.show()
+        # Show using Matplotlib:
+        if arguments.s:
+            qr.show()
+
+        # Show on Terminal:
+        if arguments.p:
+            qr.print(cnvToHashtag=True)
+
+        # Show QR Code Info:
+        if arguments.info:
+            print(f'Input: |{qr.string_input}|')
+            print(f'Input\'s Length: {qr.msg_len}')
+            print(f'Mode: {qr.mode}')
+            print(f'Version: {qr.version}')
+            print(f'Error Correction Level: {qr.er_cor_level}')
+            print(f'Size (QuitZone Included): {qr.size}x{qr.size}')
+            print(f'Mask: {qr.mask}')
 
     except Exception as e:
         print("ERROR WHILE GENERATING QR CODE:", e, e.args)
         raise e
 
 # ======================================================================================================================
+
+"""
+# Generating Multiples QR Codes for Test (Maximum Characters of Byte Encoding):
+
+from random import randint
+
+Upper_Limits_Byte   = [17, 14, 11, 7, 32, 26, 20, 14, 53, 42, 32, 24, 78, 62, 46, 34, 106, 84, 60, 44, 134, 106, 74, 58, 154, 122, 86, 64, 192, 152, 108, 84, 230,180, 130, 98, 271, 213, 151, 119, 321, 251, 177, 137, 367, 287, 203, 155, 425, 331, 241, 177, 458, 362, 258, 194, 520, 412, 292, 220, 586,450, 322, 250, 644, 504, 364, 280, 718, 560, 394, 310, 792, 624, 442, 338, 858, 666, 482, 382, 929, 711, 509, 403, 1003, 779, 565, 439, 1091,857, 611, 461, 1171, 911, 661, 511, 1273, 997, 715, 535, 1367, 1059, 751, 593, 1465, 1125, 805, 625, 1528, 1190, 868, 658, 1628, 1264, 908,698, 1732, 1370, 982, 742, 1840, 1452, 1030, 790, 1952, 1538, 1112, 842, 2068, 1628, 1168, 898, 2188, 1722, 1228, 958, 2303, 1809, 1283, 983,2431, 1911, 1351, 1051, 2563, 1989, 1423, 1093, 2699, 2099, 1499, 1139, 2809, 2213, 1579, 1219, 2953, 2331, 1663, 1273]
+ECLs                = ['L', 'M', 'Q', 'H']
+gabarito            = []
+
+for i,up_lim in enumerate(Upper_Limits_Byte):
+    string  = ''.join([chr(randint(97, 97 + 25)) for n in range(up_lim)])                   # Generate random string using a-z characters
+    qr      = QrCode(string, error_corretion_level=ECLs[i%4])                               # Force the QR Code to use specific Error Correction Level
+    gabarito.append( (f'{i};{up_lim};{qr.string_input};{qr.version};{qr.er_cor_level}') )   # Save QR Code information
+    qr.bmp(f"images/{i:04}-{qr.version}-{qr.er_cor_level}", scale=10)                       # Write on disk the QR Code
+
+with open('images/gabarito.csv','w') as f:
+    f.write( '\n'.join(gabarito) )
+"""
